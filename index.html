@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quvilearn Pro - Barra de Progreso</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root { --primary: #00d2ff; --accent: #9d50bb; --correct: #2ecc71; --wrong: #e74c3c; --quvi-orange: #FF8C00; --dark: #090a0f; }
+        body { margin: 0; background: radial-gradient(circle at center, #1b2735 0%, var(--dark) 100%); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 10px; box-sizing: border-box; }
+        .brand-header { margin-top: 10px; background: white; padding: 8px 25px; border-radius: 50px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .brand-header h1 { color: var(--quvi-orange); margin: 0; font-size: 20px; text-transform: uppercase; letter-spacing: 2px; }
+        .container { width: 100%; max-width: 450px; text-align: center; }
+        
+        /* Barra de Progreso */
+        .progress-container { width: 100%; background: #333; height: 10px; border-radius: 10px; margin: 15px 0; overflow: hidden; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.3s ease; }
+
+        .card-face { min-height: 120px; height: auto; display: flex; justify-content: center; align-items: center; border-radius: 20px; border: 2px solid var(--primary); background: rgba(15, 25, 42, 0.9); padding: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .options-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 15px; }
+        .opt-btn { background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.2); padding: 15px; border-radius: 15px; color: white; cursor: pointer; font-size: 1rem; transition: all 0.2s; }
+        .opt-btn.success { background: var(--correct) !important; border-color: white; }
+        .opt-btn.error { background: var(--wrong) !important; border-color: white; opacity: 0.8; }
+        
+        #admin-panel { display: none; background: #111; padding: 20px; border-radius: 20px; border: 2px solid var(--quvi-orange); margin: 15px 0; z-index: 1000; position: relative; max-height: 80vh; overflow-y: auto; }
+        .q-item { background: #222; margin: 5px 0; padding: 10px; border-radius: 8px; font-size: 0.75rem; display: flex; justify-content: space-between; align-items: center; }
+        .del-btn { background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        
+        #ranking-container { margin-top: 20px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px; border: 1px solid var(--accent); }
+        .ranking-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .ranking-table td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        input, select { width: 95%; padding: 12px; margin: 5px 0; border-radius: 8px; background: #222; color: white; border: 1px solid #444; }
+        .admin-trigger { margin-top: 30px; opacity: 0.05; background: none; border: none; cursor: pointer; padding: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="brand-header"><h1>Quvilearn</h1></div>
+    <div id="user-display" style="font-size: 0.8rem; margin-top: 10px; color: var(--primary); font-weight: bold;">Cargando...</div>
+
+    <div class="container">
+        <div id="admin-panel">
+            <h3 style="color:var(--quvi-orange); margin:0;">Panel Maestro</h3>
+            <select id="new-block-id">
+                <option value="1">Semana 1</option><option value="2">Semana 2</option>
+                <option value="3">Semana 3</option><option value="4">Semana 4</option>
+                <option value="5">Semana 5</option><option value="6">Semana 6</option>
+                <option value="7">Semana 7</option><option value="8">Semana 8</option>
+                <option value="9">Semana 9</option><option value="10">Semana 10</option>
+            </select>
+            <input type="text" id="new-q" placeholder="Pregunta">
+            <input type="text" id="new-correct" placeholder="Correcta">
+            <input type="text" id="new-f1" placeholder="Falsa 1">
+            <input type="text" id="new-f2" placeholder="Falsa 2">
+            <button onclick="saveToCloud()" style="background:var(--quvi-orange); width:100%; padding:14px; border-radius:8px; color:white; border:none; font-weight:bold; margin-top:10px; cursor:pointer;">PUBLICAR</button>
+            <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
+            <div id="admin-questions-list"></div>
+            <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
+            <button onclick="resetLocal()" style="background:#003344; color:#00d2ff; padding:10px; border-radius:8px; width:100%; border:1px solid #00d2ff;">🔄 REINICIAR MI PROGRESO</button>
+            <button onclick="closeAdmin()" style="background:none; color:white; border:none; margin-top:15px; cursor:pointer;">[Cerrar]</button>
+        </div>
+
+        <div id="game-view">
+            <div id="quiz-content">
+                <div class="progress-container"><div id="p-bar" class="progress-bar"></div></div>
+                <div id="current-block-label" style="background: var(--accent); padding: 5px 15px; border-radius: 8px; font-size: 0.8rem; display: inline-block; margin-bottom: 10px; font-weight: bold;">Semana</div>
+                <div class="card-face"><p id="question-text">Conectando...</p></div>
+                <div style="margin-top:10px; font-size: 0.9rem;">Aciertos: <span id="score-now">0</span></div>
+                <div class="options-grid" id="options-container"></div>
+            </div>
+            
+            <div id="lock-screen" style="display:none; padding: 30px 20px; background: rgba(0,0,0,0.6); border-radius: 20px; border: 2px solid var(--accent); margin-top: 20px;">
+                <h2 id="lock-title" style="color: var(--quvi-orange);">¡Bien hecho!</h2>
+                <p id="lock-message"></p>
+                <div id="final-badge" style="display:none; font-size: 3rem; margin: 20px 0;">🎓</div>
+            </div>
+
+            <div id="ranking-container">
+                <h3 style="margin-bottom:15px; color:var(--primary); font-size: 1rem;">🏆 Ranking Global Acumulado</h3>
+                <table class="ranking-table"><tbody id="ranking-body"></tbody></table>
+            </div>
+        </div>
+    </div>
+
+    <button class="admin-trigger" onclick="openAdmin()">⚙️</button>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAqa1X8EnsX3Ar_20z0rgyTZng9TnnJiwI",
+            authDomain: "quvilearn.firebaseapp.com",
+            databaseURL: "https://quvilearn-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "quvilearn",
+            storageBucket: "quvilearn.firebasestorage.app",
+            messagingSenderId: "181055646764",
+            appId: "1:181055646764:web:beb15d8d5ea0d6c277f589"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const ADMIN_PASS = "505711";
+
+        let userStatus = JSON.parse(localStorage.getItem('quviUserStatus')) || { name: null, currentBlock: 1, lastCompletionDate: null };
+        let cloudQuestions = [];
+        let blockScore = 0;
+
+        function openAdmin() { if(prompt("Contraseña:") === ADMIN_PASS) document.getElementById('admin-panel').style.display='block'; }
+        function closeAdmin() { document.getElementById('admin-panel').style.display='none'; }
+        function resetLocal() { if(confirm("¿Reiniciar progreso local?")) { localStorage.clear(); location.reload(); } }
+
+        window.onload = function() {
+            if (!userStatus.name) {
+                let n = prompt("Tu nombre completo:");
+                if(n) { userStatus.name = n.trim(); localStorage.setItem('quviUserStatus', JSON.stringify(userStatus)); }
+                else location.reload();
+            }
+            document.getElementById('user-display').innerText = "Participante: " + userStatus.name;
+            listenToQuestions();
+            listenToRanking();
+        };
+
+        function listenToQuestions() {
+            database.ref('questions').on('value', (s) => {
+                const data = s.val(); cloudQuestions = [];
+                const adminList = document.getElementById('admin-questions-list');
+                adminList.innerHTML = "";
+                if(data) {
+                    for(let id in data) {
+                        let qObj = data[id]; qObj.firebaseId = id; cloudQuestions.push(qObj);
+                        let div = document.createElement('div'); div.className = 'q-item';
+                        div.innerHTML = `<span>[S${qObj.block}] ${qObj.q.substring(0,20)}...</span><button class="del-btn" onclick="deleteSingleQuestion('${id}')">X</button>`;
+                        adminList.appendChild(div);
+                    }
+                }
+                loadBlock();
+            });
+        }
+
+        function deleteSingleQuestion(id) { if(confirm("¿Borrar pregunta?")) database.ref('questions/' + id).remove(); }
+
+        function loadBlock() {
+            if (checkLock()) return;
+            let blockData = cloudQuestions.filter(q => q.block == userStatus.currentBlock);
+            if (blockData.length === 0) {
+                document.getElementById('question-text').innerText = "Esperando preguntas del profesor...";
+                return;
+            }
+            document.getElementById('current-block-label').innerText = "SEMANA " + userStatus.currentBlock;
+            render(blockData);
+        }
+
+        function render(questions) {
+            let index = 0; blockScore = 0;
+            const draw = () => {
+                document.getElementById('score-now').innerText = blockScore;
+                let progress = (index / questions.length) * 100;
+                document.getElementById('p-bar').style.width = progress + "%";
+
+                if (index >= questions.length) { finishBlock(blockScore); return; }
+                const current = questions[index];
+                document.getElementById('question-text').innerText = current.q;
+                const opts = [current.c, current.f1, current.f2].sort(() => Math.random() - 0.5);
+                const container = document.getElementById('options-container');
+                container.innerHTML = '';
+                opts.forEach(o => {
+                    const b = document.createElement('button');
+                    b.className = 'opt-btn'; b.innerText = o;
+                    b.onclick = () => {
+                        document.querySelectorAll('.opt-btn').forEach(btn => btn.disabled = true);
+                        if(o === current.c) { b.classList.add('success'); blockScore++; }
+                        else b.classList.add('error');
+                        setTimeout(() => { index++; draw(); }, 1200);
+                    };
+                    container.appendChild(b);
+                });
+            };
+            draw();
+        }
+
+        function finishBlock(pts) {
+            uploadScore(userStatus.name, pts);
+            userStatus.currentBlock++;
+            userStatus.lastCompletionDate = new Date().toISOString();
+            localStorage.setItem('quviUserStatus', JSON.stringify(userStatus));
+            location.reload();
+        }
+
+        function uploadScore(name, pts) {
+            database.ref('ranking/'+name).once('value').then(s => {
+                let totalActual = (s.val() ? s.val().score : 0);
+                database.ref('ranking/'+name).set({name, score: totalActual + pts});
+            });
+        }
+
+        function listenToRanking() {
+            database.ref('ranking').on('value', (s) => {
+                const data = s.val(); let arr = [];
+                if(data) for(let id in data) arr.push(data[id]);
+                arr.sort((a,b) => b.score - a.score);
+                document.getElementById('ranking-body').innerHTML = arr.slice(0, 17).map((e,i)=>`
+                    <tr><td>${i+1}º</td><td style="text-align:left; padding-left:15px;">${e.name}</td><td style="font-weight:bold; color:var(--quvi-orange);">${e.score} pts</td></tr>`).join('');
+            });
+        }
+
+        function checkLock() {
+            if (userStatus.currentBlock > 10) {
+                document.getElementById('quiz-content').style.display='none';
+                document.getElementById('lock-screen').style.display='block';
+                document.getElementById('lock-title').innerText = "🏆 CURSO FINALIZADO";
+                document.getElementById('final-badge').style.display='block';
+                return true;
+            }
+            if (!userStatus.lastCompletionDate) return false;
+            const diff = Math.floor((new Date() - new Date(userStatus.lastCompletionDate)) / (1000 * 60 * 60 * 24));
+            if (diff < 7) {
+                document.getElementById('quiz-content').style.display='none';
+                document.getElementById('lock-screen').style.display='block';
+                document.getElementById('lock-message').innerText = `Puntuación guardada. Vuelve en ${7-diff} días.`;
+                return true;
+            }
+            return false;
+        }
+
+        function saveToCloud() {
+            const q=document.getElementById('new-q').value, c=document.getElementById('new-correct').value, f1=document.getElementById('new-f1').value, f2=document.getElementById('new-f2').value, b=document.getElementById('new-block-id').value;
+            if(q&&c&&f1&&f2) {
+                database.ref('questions').push({q,c,f1,f2,block:b});
+                document.getElementById('new-q').value=""; document.getElementById('new-correct').value="";
+                document.getElementById('new-f1').value=""; document.getElementById('new-f2').value="";
+                alert("Publicada.");
+            }
+        }
+    </script>
+</body>
+</html>
