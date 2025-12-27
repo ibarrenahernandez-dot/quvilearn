@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quvilearn Pro - Barra de Progreso</title>
+    <title>Quvilearn Pro - Sistema de Puntos Acumulados</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -13,25 +13,30 @@
         .brand-header h1 { color: var(--quvi-orange); margin: 0; font-size: 20px; text-transform: uppercase; letter-spacing: 2px; }
         .container { width: 100%; max-width: 450px; text-align: center; }
         
-        /* Barra de Progreso */
-        .progress-container { width: 100%; background: #333; height: 10px; border-radius: 10px; margin: 15px 0; overflow: hidden; }
+        .progress-container { width: 100%; background: #333; height: 10px; border-radius: 10px; margin: 15px 0; overflow: hidden; border: 1px solid #444; }
         .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.3s ease; }
 
         .card-face { min-height: 120px; height: auto; display: flex; justify-content: center; align-items: center; border-radius: 20px; border: 2px solid var(--primary); background: rgba(15, 25, 42, 0.9); padding: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         .options-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 15px; }
-        .opt-btn { background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.2); padding: 15px; border-radius: 15px; color: white; cursor: pointer; font-size: 1rem; transition: all 0.2s; }
+        .opt-btn { background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.2); padding: 15px; border-radius: 15px; color: white; cursor: pointer; font-size: 1rem; transition: all 0.2s; text-align: center; }
         .opt-btn.success { background: var(--correct) !important; border-color: white; }
         .opt-btn.error { background: var(--wrong) !important; border-color: white; opacity: 0.8; }
         
-        #admin-panel { display: none; background: #111; padding: 20px; border-radius: 20px; border: 2px solid var(--quvi-orange); margin: 15px 0; z-index: 1000; position: relative; max-height: 80vh; overflow-y: auto; }
+        /* PANEL ADMIN */
+        #admin-panel { display: none; background: #111; padding: 20px; border-radius: 20px; border: 2px solid var(--quvi-orange); margin: 15px 0; z-index: 1000; position: relative; max-height: 80vh; overflow-y: auto; text-align: left; }
         .q-item { background: #222; margin: 5px 0; padding: 10px; border-radius: 8px; font-size: 0.75rem; display: flex; justify-content: space-between; align-items: center; }
         .del-btn { background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        .danger-btn { background: #550000; color: #ffbcbc; border: 1px solid red; padding: 10px; margin-top: 10px; cursor: pointer; border-radius: 8px; width: 100%; font-size: 0.7rem; font-weight: bold; }
         
+        /* RANKING */
         #ranking-container { margin-top: 20px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px; border: 1px solid var(--accent); }
         .ranking-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         .ranking-table td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .ranking-table td:first-child { font-weight: bold; color: var(--primary); width: 30px; }
+        
         input, select { width: 95%; padding: 12px; margin: 5px 0; border-radius: 8px; background: #222; color: white; border: 1px solid #444; }
         .admin-trigger { margin-top: 30px; opacity: 0.05; background: none; border: none; cursor: pointer; padding: 20px; }
+        .score-display { font-size: 1.2rem; font-weight: bold; color: var(--primary); margin-top: 10px; display: block; }
     </style>
 </head>
 <body>
@@ -41,7 +46,7 @@
 
     <div class="container">
         <div id="admin-panel">
-            <h3 style="color:var(--quvi-orange); margin:0;">Panel Maestro</h3>
+            <h3 style="color:var(--quvi-orange); margin:0 0 10px 0;">Panel Maestro</h3>
             <select id="new-block-id">
                 <option value="1">Semana 1</option><option value="2">Semana 2</option>
                 <option value="3">Semana 3</option><option value="4">Semana 4</option>
@@ -50,34 +55,42 @@
                 <option value="9">Semana 9</option><option value="10">Semana 10</option>
             </select>
             <input type="text" id="new-q" placeholder="Pregunta">
-            <input type="text" id="new-correct" placeholder="Correcta">
-            <input type="text" id="new-f1" placeholder="Falsa 1">
-            <input type="text" id="new-f2" placeholder="Falsa 2">
-            <button onclick="saveToCloud()" style="background:var(--quvi-orange); width:100%; padding:14px; border-radius:8px; color:white; border:none; font-weight:bold; margin-top:10px; cursor:pointer;">PUBLICAR</button>
+            <input type="text" id="new-correct" placeholder="Respuesta Correcta">
+            <input type="text" id="new-f1" placeholder="Respuesta Falsa 1">
+            <input type="text" id="new-f2" placeholder="Respuesta Falsa 2">
+            <button onclick="saveToCloud()" style="background:var(--quvi-orange); width:100%; padding:14px; border-radius:8px; color:white; border:none; font-weight:bold; margin-top:10px; cursor:pointer;">PUBLICAR PREGUNTA</button>
+            
             <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
+            <h4 style="margin: 5px 0; font-size: 0.8rem;">Gestionar Preguntas:</h4>
             <div id="admin-questions-list"></div>
+
             <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
-            <button onclick="resetLocal()" style="background:#003344; color:#00d2ff; padding:10px; border-radius:8px; width:100%; border:1px solid #00d2ff;">🔄 REINICIAR MI PROGRESO</button>
-            <button onclick="closeAdmin()" style="background:none; color:white; border:none; margin-top:15px; cursor:pointer;">[Cerrar]</button>
+            <button onclick="resetLocal()" style="background:#003344; color:#00d2ff; padding:10px; border-radius:8px; width:100%; border:1px solid #00d2ff; cursor:pointer;">🔄 REINICIAR MI PROGRESO</button>
+            <button class="danger-btn" onclick="clearQuestions()">🧨 BORRAR TODAS LAS PREGUNTAS</button>
+            <button class="danger-btn" style="background:#333;" onclick="clearRanking()">🏆 BORRAR RANKING GLOBAL</button>
+            <center><button onclick="closeAdmin()" style="background:none; color:white; border:none; margin-top:15px; cursor:pointer;">[Cerrar Panel]</button></center>
         </div>
 
         <div id="game-view">
             <div id="quiz-content">
                 <div class="progress-container"><div id="p-bar" class="progress-bar"></div></div>
                 <div id="current-block-label" style="background: var(--accent); padding: 5px 15px; border-radius: 8px; font-size: 0.8rem; display: inline-block; margin-bottom: 10px; font-weight: bold;">Semana</div>
-                <div class="card-face"><p id="question-text">Conectando...</p></div>
-                <div style="margin-top:10px; font-size: 0.9rem;">Aciertos: <span id="score-now">0</span></div>
+                
+                <div class="card-face"><p id="question-text">Cargando...</p></div>
+                
+                <div class="score-display">Puntos Semana: <span id="score-now">0</span> / <span id="total-q">0</span></div>
+                
                 <div class="options-grid" id="options-container"></div>
             </div>
             
             <div id="lock-screen" style="display:none; padding: 30px 20px; background: rgba(0,0,0,0.6); border-radius: 20px; border: 2px solid var(--accent); margin-top: 20px;">
-                <h2 id="lock-title" style="color: var(--quvi-orange);">¡Bien hecho!</h2>
+                <h2 id="lock-title" style="color: var(--quvi-orange);">¡Semana Completada!</h2>
                 <p id="lock-message"></p>
                 <div id="final-badge" style="display:none; font-size: 3rem; margin: 20px 0;">🎓</div>
             </div>
 
             <div id="ranking-container">
-                <h3 style="margin-bottom:15px; color:var(--primary); font-size: 1rem;">🏆 Ranking Global Acumulado</h3>
+                <h3 style="margin-bottom:15px; color:var(--primary); font-size: 1rem;">🏆 Ranking Total Acumulado (10 Semanas)</h3>
                 <table class="ranking-table"><tbody id="ranking-body"></tbody></table>
             </div>
         </div>
@@ -101,7 +114,7 @@
 
         let userStatus = JSON.parse(localStorage.getItem('quviUserStatus')) || { name: null, currentBlock: 1, lastCompletionDate: null };
         let cloudQuestions = [];
-        let blockScore = 0;
+        let pointsThisWeek = 0;
 
         function openAdmin() { if(prompt("Contraseña:") === ADMIN_PASS) document.getElementById('admin-panel').style.display='block'; }
         function closeAdmin() { document.getElementById('admin-panel').style.display='none'; }
@@ -109,7 +122,7 @@
 
         window.onload = function() {
             if (!userStatus.name) {
-                let n = prompt("Tu nombre completo:");
+                let n = prompt("Introduce tu nombre completo para el ranking:");
                 if(n) { userStatus.name = n.trim(); localStorage.setItem('quviUserStatus', JSON.stringify(userStatus)); }
                 else location.reload();
             }
@@ -135,27 +148,28 @@
             });
         }
 
-        function deleteSingleQuestion(id) { if(confirm("¿Borrar pregunta?")) database.ref('questions/' + id).remove(); }
+        function deleteSingleQuestion(id) { if(confirm("¿Borrar esta pregunta?")) database.ref('questions/' + id).remove(); }
 
         function loadBlock() {
             if (checkLock()) return;
             let blockData = cloudQuestions.filter(q => q.block == userStatus.currentBlock);
             if (blockData.length === 0) {
-                document.getElementById('question-text').innerText = "Esperando preguntas del profesor...";
+                document.getElementById('question-text').innerText = "Esperando que el profesor publique las preguntas de la semana...";
                 return;
             }
             document.getElementById('current-block-label').innerText = "SEMANA " + userStatus.currentBlock;
+            document.getElementById('total-q').innerText = blockData.length;
             render(blockData);
         }
 
         function render(questions) {
-            let index = 0; blockScore = 0;
+            let index = 0; pointsThisWeek = 0;
             const draw = () => {
-                document.getElementById('score-now').innerText = blockScore;
+                document.getElementById('score-now').innerText = pointsThisWeek;
                 let progress = (index / questions.length) * 100;
                 document.getElementById('p-bar').style.width = progress + "%";
 
-                if (index >= questions.length) { finishBlock(blockScore); return; }
+                if (index >= questions.length) { finishBlock(pointsThisWeek); return; }
                 const current = questions[index];
                 document.getElementById('question-text').innerText = current.q;
                 const opts = [current.c, current.f1, current.f2].sort(() => Math.random() - 0.5);
@@ -166,7 +180,7 @@
                     b.className = 'opt-btn'; b.innerText = o;
                     b.onclick = () => {
                         document.querySelectorAll('.opt-btn').forEach(btn => btn.disabled = true);
-                        if(o === current.c) { b.classList.add('success'); blockScore++; }
+                        if(o === current.c) { b.classList.add('success'); pointsThisWeek++; }
                         else b.classList.add('error');
                         setTimeout(() => { index++; draw(); }, 1200);
                     };
@@ -186,8 +200,8 @@
 
         function uploadScore(name, pts) {
             database.ref('ranking/'+name).once('value').then(s => {
-                let totalActual = (s.val() ? s.val().score : 0);
-                database.ref('ranking/'+name).set({name, score: totalActual + pts});
+                let currentTotal = (s.val() ? s.val().score : 0);
+                database.ref('ranking/'+name).set({name, score: currentTotal + pts});
             });
         }
 
@@ -205,7 +219,7 @@
             if (userStatus.currentBlock > 10) {
                 document.getElementById('quiz-content').style.display='none';
                 document.getElementById('lock-screen').style.display='block';
-                document.getElementById('lock-title').innerText = "🏆 CURSO FINALIZADO";
+                document.getElementById('lock-title').innerText = "🏆 CURSO COMPLETADO";
                 document.getElementById('final-badge').style.display='block';
                 return true;
             }
@@ -214,7 +228,7 @@
             if (diff < 7) {
                 document.getElementById('quiz-content').style.display='none';
                 document.getElementById('lock-screen').style.display='block';
-                document.getElementById('lock-message').innerText = `Puntuación guardada. Vuelve en ${7-diff} días.`;
+                document.getElementById('lock-message').innerText = `Has completado el reto de esta semana. Tu puntuación acumulada está en el ranking. Vuelve en ${7-diff} días.`;
                 return true;
             }
             return false;
@@ -226,9 +240,11 @@
                 database.ref('questions').push({q,c,f1,f2,block:b});
                 document.getElementById('new-q').value=""; document.getElementById('new-correct').value="";
                 document.getElementById('new-f1').value=""; document.getElementById('new-f2').value="";
-                alert("Publicada.");
+                alert("Pregunta publicada en Semana " + b);
             }
         }
+        function clearQuestions() { if(confirm("¿Borrar TODAS las preguntas?")) database.ref('questions').remove(); }
+        function clearRanking() { if(confirm("¿Borrar el RANKING global?")) database.ref('ranking').remove(); }
     </script>
 </body>
 </html>
