@@ -3,7 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quvilearn Pro - Sistema de Puntos Acumulados</title>
+    <title>Quvilearn Pro</title>
+    
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="apple-mobile-web-app-title" content="Quvilearn">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -12,28 +18,21 @@
         .brand-header { margin-top: 10px; background: white; padding: 8px 25px; border-radius: 50px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         .brand-header h1 { color: var(--quvi-orange); margin: 0; font-size: 20px; text-transform: uppercase; letter-spacing: 2px; }
         .container { width: 100%; max-width: 450px; text-align: center; }
-        
         .progress-container { width: 100%; background: #333; height: 10px; border-radius: 10px; margin: 15px 0; overflow: hidden; border: 1px solid #444; }
         .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.3s ease; }
-
         .card-face { min-height: 120px; height: auto; display: flex; justify-content: center; align-items: center; border-radius: 20px; border: 2px solid var(--primary); background: rgba(15, 25, 42, 0.9); padding: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         .options-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 15px; }
         .opt-btn { background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.2); padding: 15px; border-radius: 15px; color: white; cursor: pointer; font-size: 1rem; transition: all 0.2s; text-align: center; }
         .opt-btn.success { background: var(--correct) !important; border-color: white; }
         .opt-btn.error { background: var(--wrong) !important; border-color: white; opacity: 0.8; }
-        
-        /* PANEL ADMIN */
         #admin-panel { display: none; background: #111; padding: 20px; border-radius: 20px; border: 2px solid var(--quvi-orange); margin: 15px 0; z-index: 1000; position: relative; max-height: 80vh; overflow-y: auto; text-align: left; }
         .q-item { background: #222; margin: 5px 0; padding: 10px; border-radius: 8px; font-size: 0.75rem; display: flex; justify-content: space-between; align-items: center; }
         .del-btn { background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
         .danger-btn { background: #550000; color: #ffbcbc; border: 1px solid red; padding: 10px; margin-top: 10px; cursor: pointer; border-radius: 8px; width: 100%; font-size: 0.7rem; font-weight: bold; }
-        
-        /* RANKING */
         #ranking-container { margin-top: 20px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 20px; border: 1px solid var(--accent); }
         .ranking-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         .ranking-table td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .ranking-table td:first-child { font-weight: bold; color: var(--primary); width: 30px; }
-        
         input, select { width: 95%; padding: 12px; margin: 5px 0; border-radius: 8px; background: #222; color: white; border: 1px solid #444; }
         .admin-trigger { margin-top: 30px; opacity: 0.05; background: none; border: none; cursor: pointer; padding: 20px; }
         .score-display { font-size: 1.2rem; font-weight: bold; color: var(--primary); margin-top: 10px; display: block; }
@@ -59,11 +58,8 @@
             <input type="text" id="new-f1" placeholder="Respuesta Falsa 1">
             <input type="text" id="new-f2" placeholder="Respuesta Falsa 2">
             <button onclick="saveToCloud()" style="background:var(--quvi-orange); width:100%; padding:14px; border-radius:8px; color:white; border:none; font-weight:bold; margin-top:10px; cursor:pointer;">PUBLICAR PREGUNTA</button>
-            
             <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
-            <h4 style="margin: 5px 0; font-size: 0.8rem;">Gestionar Preguntas:</h4>
             <div id="admin-questions-list"></div>
-
             <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
             <button onclick="resetLocal()" style="background:#003344; color:#00d2ff; padding:10px; border-radius:8px; width:100%; border:1px solid #00d2ff; cursor:pointer;">🔄 REINICIAR MI PROGRESO</button>
             <button class="danger-btn" onclick="clearQuestions()">🧨 BORRAR TODAS LAS PREGUNTAS</button>
@@ -75,22 +71,17 @@
             <div id="quiz-content">
                 <div class="progress-container"><div id="p-bar" class="progress-bar"></div></div>
                 <div id="current-block-label" style="background: var(--accent); padding: 5px 15px; border-radius: 8px; font-size: 0.8rem; display: inline-block; margin-bottom: 10px; font-weight: bold;">Semana</div>
-                
                 <div class="card-face"><p id="question-text">Cargando...</p></div>
-                
                 <div class="score-display">Puntos Semana: <span id="score-now">0</span> / <span id="total-q">0</span></div>
-                
                 <div class="options-grid" id="options-container"></div>
             </div>
-            
             <div id="lock-screen" style="display:none; padding: 30px 20px; background: rgba(0,0,0,0.6); border-radius: 20px; border: 2px solid var(--accent); margin-top: 20px;">
                 <h2 id="lock-title" style="color: var(--quvi-orange);">¡Semana Completada!</h2>
                 <p id="lock-message"></p>
                 <div id="final-badge" style="display:none; font-size: 3rem; margin: 20px 0;">🎓</div>
             </div>
-
             <div id="ranking-container">
-                <h3 style="margin-bottom:15px; color:var(--primary); font-size: 1rem;">🏆 Ranking Total Acumulado (10 Semanas)</h3>
+                <h3 style="margin-bottom:15px; color:var(--primary); font-size: 1rem;">🏆 Ranking Total Acumulado</h3>
                 <table class="ranking-table"><tbody id="ranking-body"></tbody></table>
             </div>
         </div>
@@ -111,7 +102,6 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         const ADMIN_PASS = "505711";
-
         let userStatus = JSON.parse(localStorage.getItem('quviUserStatus')) || { name: null, currentBlock: 1, lastCompletionDate: null };
         let cloudQuestions = [];
         let pointsThisWeek = 0;
@@ -122,7 +112,7 @@
 
         window.onload = function() {
             if (!userStatus.name) {
-                let n = prompt("Introduce tu nombre completo para el ranking:");
+                let n = prompt("Nombre completo:");
                 if(n) { userStatus.name = n.trim(); localStorage.setItem('quviUserStatus', JSON.stringify(userStatus)); }
                 else location.reload();
             }
@@ -148,13 +138,13 @@
             });
         }
 
-        function deleteSingleQuestion(id) { if(confirm("¿Borrar esta pregunta?")) database.ref('questions/' + id).remove(); }
+        function deleteSingleQuestion(id) { if(confirm("¿Borrar?")) database.ref('questions/' + id).remove(); }
 
         function loadBlock() {
             if (checkLock()) return;
             let blockData = cloudQuestions.filter(q => q.block == userStatus.currentBlock);
             if (blockData.length === 0) {
-                document.getElementById('question-text').innerText = "Esperando que el profesor publique las preguntas de la semana...";
+                document.getElementById('question-text').innerText = "Esperando preguntas...";
                 return;
             }
             document.getElementById('current-block-label').innerText = "SEMANA " + userStatus.currentBlock;
@@ -168,7 +158,6 @@
                 document.getElementById('score-now').innerText = pointsThisWeek;
                 let progress = (index / questions.length) * 100;
                 document.getElementById('p-bar').style.width = progress + "%";
-
                 if (index >= questions.length) { finishBlock(pointsThisWeek); return; }
                 const current = questions[index];
                 document.getElementById('question-text').innerText = current.q;
@@ -228,7 +217,7 @@
             if (diff < 7) {
                 document.getElementById('quiz-content').style.display='none';
                 document.getElementById('lock-screen').style.display='block';
-                document.getElementById('lock-message').innerText = `Has completado el reto de esta semana. Tu puntuación acumulada está en el ranking. Vuelve en ${7-diff} días.`;
+                document.getElementById('lock-message').innerText = `Vuelve en ${7-diff} días.`;
                 return true;
             }
             return false;
@@ -240,11 +229,11 @@
                 database.ref('questions').push({q,c,f1,f2,block:b});
                 document.getElementById('new-q').value=""; document.getElementById('new-correct').value="";
                 document.getElementById('new-f1').value=""; document.getElementById('new-f2').value="";
-                alert("Pregunta publicada en Semana " + b);
+                alert("Publicada.");
             }
         }
-        function clearQuestions() { if(confirm("¿Borrar TODAS las preguntas?")) database.ref('questions').remove(); }
-        function clearRanking() { if(confirm("¿Borrar el RANKING global?")) database.ref('ranking').remove(); }
+        function clearQuestions() { if(confirm("¿Borrar todas?")) database.ref('questions').remove(); }
+        function clearRanking() { if(confirm("¿Borrar ranking?")) database.ref('ranking').remove(); }
     </script>
 </body>
 </html>
